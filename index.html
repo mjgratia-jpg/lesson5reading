@@ -22,8 +22,11 @@
   }
   .chunk {
     background-color: #ffd180;
-    cursor: grab;
+    cursor: pointer;
     transition: background-color 0.3s ease;
+  }
+  .chunk.selected {
+    background-color: #ffe082;
   }
   .drop-zone {
     background-color: #ffffff;
@@ -51,13 +54,13 @@
   }
   .sentence-box > p {
     font-size: 25px;
+    font-weight: bold;
   }
 </style>
 </head>
 <body>
 
 <h2>Drag and Drop: 문장 의미 단위 해석 맞추기 (Ver 2.)</h2>
-
 <div id="exercise-container"></div>
 
 <script>
@@ -85,6 +88,8 @@ function shuffle(array) {
   return array;
 }
 
+let selectedChunk = null;
+
 function createSentenceBox({ id, english, korean }) {
   const container = document.createElement("div");
   container.className = "sentence-box";
@@ -109,17 +114,35 @@ function createSentenceBox({ id, english, korean }) {
     const engKey = english[korean.indexOf(kor)];
     const chunk = document.createElement("div");
     chunk.className = "chunk";
-    chunk.draggable = true;
     chunk.dataset.text = engKey;
     chunk.textContent = kor;
-    chunk.addEventListener("dragstart", e => {
-      e.dataTransfer.setData("text/plain", engKey);
-      e.dataTransfer.setData("display", kor);
+
+    chunk.addEventListener("click", () => {
+      if (chunk.classList.contains("selected")) {
+        chunk.classList.remove("selected");
+        selectedChunk = null;
+      } else {
+        document.querySelectorAll(".chunk").forEach(c => c.classList.remove("selected"));
+        chunk.classList.add("selected");
+        selectedChunk = { eng: engKey, kor: kor, element: chunk };
+      }
     });
     chunkBox.appendChild(chunk);
   });
 
   container.appendChild(chunkBox);
+
+  container.querySelectorAll(".drop-zone").forEach(zone => {
+    zone.addEventListener("click", () => {
+      if (!selectedChunk || zone.getAttribute("locked")) return;
+
+      zone.textContent = selectedChunk.kor;
+      zone.setAttribute("data-dropped", selectedChunk.eng);
+      zone.style.backgroundColor = "#e1f5fe";
+      selectedChunk.element.remove();
+      selectedChunk = null;
+    });
+  });
 
   const scoreBtn = document.createElement("button");
   scoreBtn.className = "score-btn";
@@ -138,16 +161,17 @@ function createSentenceBox({ id, english, korean }) {
         const wrongText = zone.textContent;
         const newChunk = document.createElement("div");
         newChunk.className = "chunk";
-        newChunk.draggable = true;
         newChunk.dataset.text = actual;
         newChunk.textContent = wrongText;
-        newChunk.addEventListener("dragstart", e => {
-          e.dataTransfer.setData("text/plain", actual);
-          e.dataTransfer.setData("display", wrongText);
+        newChunk.addEventListener("click", () => {
+          document.querySelectorAll(".chunk").forEach(c => c.classList.remove("selected"));
+          newChunk.classList.add("selected");
+          selectedChunk = { eng: actual, kor: wrongText, element: newChunk };
         });
         chunkBox.appendChild(newChunk);
         zone.textContent = "";
         zone.removeAttribute("data-dropped");
+        zone.style.backgroundColor = "#ffffff";
       } else {
         zone.style.borderColor = "red";
         zone.style.backgroundColor = "#ffe6e6";
@@ -172,12 +196,12 @@ function createSentenceBox({ id, english, korean }) {
       const engKey = english[korean.indexOf(kor)];
       const chunk = document.createElement("div");
       chunk.className = "chunk";
-      chunk.draggable = true;
       chunk.dataset.text = engKey;
       chunk.textContent = kor;
-      chunk.addEventListener("dragstart", e => {
-        e.dataTransfer.setData("text/plain", engKey);
-        e.dataTransfer.setData("display", kor);
+      chunk.addEventListener("click", () => {
+        document.querySelectorAll(".chunk").forEach(c => c.classList.remove("selected"));
+        chunk.classList.add("selected");
+        selectedChunk = { eng: engKey, kor: kor, element: chunk };
       });
       chunkBox.appendChild(chunk);
     });
@@ -185,25 +209,6 @@ function createSentenceBox({ id, english, korean }) {
   container.appendChild(resetBtn);
 
   document.getElementById("exercise-container").appendChild(container);
-
-  container.querySelectorAll(".drop-zone").forEach(zone => {
-    zone.addEventListener("dragover", e => e.preventDefault());
-    zone.addEventListener("drop", e => {
-      e.preventDefault();
-      if (zone.getAttribute("locked")) return;
-      const eng = e.dataTransfer.getData("text/plain");
-      const kor = e.dataTransfer.getData("display");
-      const chunkElements = chunkBox.querySelectorAll(".chunk");
-      chunkElements.forEach(chunk => {
-        if (chunk.textContent === kor && chunk.dataset.text === eng) {
-          chunk.remove();
-        }
-      });
-      zone.textContent = kor;
-      zone.setAttribute("data-dropped", eng);
-      zone.style.backgroundColor = "#e1f5fe";
-    });
-  });
 }
 
 textData.forEach(createSentenceBox);
