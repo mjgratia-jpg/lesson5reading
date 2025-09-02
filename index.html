@@ -1,0 +1,213 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>문장 의미 단위 맞추기 (Ver 2.)</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    padding: 20px;
+  }
+  .sentence-box {
+    margin-bottom: 40px;
+    position: relative;
+  }
+  .chunk, .drop-zone {
+    display: inline-block;
+    padding: 8px 12px;
+    margin: 5px;
+    border-radius: 6px;
+    border: 3px solid #444;
+  }
+  .chunk {
+    background-color: #ffd180;
+    cursor: grab;
+    transition: background-color 0.3s ease;
+  }
+  .drop-zone {
+    background-color: #ffffff;
+    min-width: 150px;
+    min-height: 30px;
+    transition: background-color 0.3s ease;
+  }
+  .chunk-box {
+    margin-top: 10px;
+    display: block;
+  }
+  .reset-btn, .score-btn {
+    float: right;
+    margin-left: 10px;
+    padding: 6px 12px;
+    background-color: #1976d2;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .reset-btn:hover, .score-btn:hover {
+    background-color: #1565c0;
+  }
+  .sentence-box > p {
+    font-size: 25px;
+  }
+</style>
+</head>
+<body>
+
+<h2>Drag and Drop: 문장 의미 단위 해석 맞추기 (Ver 2.)</h2>
+
+<div id="exercise-container"></div>
+
+<script>
+const textData = [
+  { id: 1, english: ["Be Smart", "with Your Smartphones!"], korean: ["스마트해져", "너의 스마트폰(사용)하는 데에"] },
+  { id: 2, english: ["Living", "without smartphones", "is difficult", "for many of us", "these days."], korean: ["사는 것은", "스마트폰 없이", "어렵다", "우리들 중 많은 사람들에게", "요즘"] },
+  { id: 3, english: ["However,", "unwise or too much use of smartphones", "can cause", "various problems."], korean: ["하지만", "현명하지 않거나 너무 과도한 스마트폰의 사용은", "야기할 수 있다", "다양한 문제들을"] },
+  { id: 4, english: ["Are you a smombie?"], korean: ["당신은 스몸비인가요?"] },
+  { id: 5, english: ["All over the world,", "people are walking around", "like zombies."], korean: ["전 세계적으로", "사람들이 걸어 다니고 있다", "좀비처럼"] },
+  { id: 6, english: ["Their heads are down,", "and their eyes are", "on their smartphones."], korean: ["그들의 머리는 아래를 향한다", "그리고 그들의 눈은 ~에 있다", "스마트폰에"] },
+  { id: 7, english: ["We call", "such people", "smombies, smartphone zombies."], korean: ["우리는 부른다", "그런 사람들을", "스몸비, 즉 스마트폰 좀비라고"] },
+  { id: 8, english: ["If you are a smombie,", "you can have", "various", "safety problems."], korean: ["만약 당신이 스몸비라면", "당신은 가질 수 있다", "다양한", "안전 (관련) 문제들을"] },
+  { id: 9, english: ["You may not see", "a hole in the street,", "so", "you may fall and get hurt."], korean: ["당신은 보지 못할 수 있다", "거리에 있는 구덩이를", "그래서", "당신은 넘어져서 다칠지도 모른다"] },
+  { id: 10, english: ["You may", "get into a car accident,", "too."], korean: ["당신은 ~할 수도 있다", "교통사고를 겪는다", "또한"] },
+  { id: 11, english: ["So", "what can you do", "to prevent", "these problems?"], korean: ["그렇다면", "당신은 무엇을 할 수 있을까", "예방하기 위해", "이러한 문제들을"] },
+  { id: 12, english: ["It’s simple."], korean: ["그것은 간단하다"] },
+  { id: 13, english: ["Do not look at your smartphone", "while you are walking!"], korean: ["당신의 스마트폰을 보지 마라", "당신이 걷고 있는 동안에는!"] }
+];
+
+function shuffle(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
+
+function createSentenceBox({ id, english, korean }) {
+  const container = document.createElement("div");
+  container.className = "sentence-box";
+  container.id = `sentence${id}`;
+
+  const title = document.createElement("p");
+  title.innerHTML = `<strong>${id}. ${english.join(" / ")}</strong>`;
+  container.appendChild(title);
+
+  english.forEach(eng => {
+    const zone = document.createElement("div");
+    zone.className = "drop-zone";
+    zone.setAttribute("data-answer", eng);
+    container.appendChild(zone);
+  });
+
+  const chunkBox = document.createElement("div");
+  chunkBox.className = "chunk-box";
+  const korCopy = shuffle([...korean]);
+
+  korCopy.forEach((kor, index) => {
+    const engKey = english[korean.indexOf(kor)];
+    const chunk = document.createElement("div");
+    chunk.className = "chunk";
+    chunk.draggable = true;
+    chunk.dataset.text = engKey;
+    chunk.textContent = kor;
+    chunk.addEventListener("dragstart", e => {
+      e.dataTransfer.setData("text/plain", engKey);
+      e.dataTransfer.setData("display", kor);
+    });
+    chunkBox.appendChild(chunk);
+  });
+
+  container.appendChild(chunkBox);
+
+  const scoreBtn = document.createElement("button");
+  scoreBtn.className = "score-btn";
+  scoreBtn.textContent = "채점";
+  scoreBtn.addEventListener("click", () => {
+    container.querySelectorAll(".drop-zone").forEach(zone => {
+      const expected = zone.getAttribute("data-answer");
+      const actual = zone.getAttribute("data-dropped");
+      if (actual === expected) {
+        zone.style.borderColor = "green";
+        zone.style.backgroundColor = "#e6ffe6";
+        zone.setAttribute("locked", "true");
+      } else if (actual) {
+        zone.style.borderColor = "red";
+        zone.style.backgroundColor = "#ffe6e6";
+        const wrongText = zone.textContent;
+        const newChunk = document.createElement("div");
+        newChunk.className = "chunk";
+        newChunk.draggable = true;
+        newChunk.dataset.text = actual;
+        newChunk.textContent = wrongText;
+        newChunk.addEventListener("dragstart", e => {
+          e.dataTransfer.setData("text/plain", actual);
+          e.dataTransfer.setData("display", wrongText);
+        });
+        chunkBox.appendChild(newChunk);
+        zone.textContent = "";
+        zone.removeAttribute("data-dropped");
+      } else {
+        zone.style.borderColor = "red";
+        zone.style.backgroundColor = "#ffe6e6";
+      }
+    });
+  });
+  container.appendChild(scoreBtn);
+
+  const resetBtn = document.createElement("button");
+  resetBtn.className = "reset-btn";
+  resetBtn.textContent = "초기화";
+  resetBtn.addEventListener("click", () => {
+    container.querySelectorAll(".drop-zone").forEach(zone => {
+      zone.textContent = "";
+      zone.removeAttribute("data-dropped");
+      zone.removeAttribute("locked");
+      zone.style.backgroundColor = "#ffffff";
+      zone.style.borderColor = "#444";
+    });
+    chunkBox.innerHTML = "";
+    shuffle([...korean]).forEach(kor => {
+      const engKey = english[korean.indexOf(kor)];
+      const chunk = document.createElement("div");
+      chunk.className = "chunk";
+      chunk.draggable = true;
+      chunk.dataset.text = engKey;
+      chunk.textContent = kor;
+      chunk.addEventListener("dragstart", e => {
+        e.dataTransfer.setData("text/plain", engKey);
+        e.dataTransfer.setData("display", kor);
+      });
+      chunkBox.appendChild(chunk);
+    });
+  });
+  container.appendChild(resetBtn);
+
+  document.getElementById("exercise-container").appendChild(container);
+
+  container.querySelectorAll(".drop-zone").forEach(zone => {
+    zone.addEventListener("dragover", e => e.preventDefault());
+    zone.addEventListener("drop", e => {
+      e.preventDefault();
+      if (zone.getAttribute("locked")) return;
+      const eng = e.dataTransfer.getData("text/plain");
+      const kor = e.dataTransfer.getData("display");
+      const chunkElements = chunkBox.querySelectorAll(".chunk");
+      chunkElements.forEach(chunk => {
+        if (chunk.textContent === kor && chunk.dataset.text === eng) {
+          chunk.remove();
+        }
+      });
+      zone.textContent = kor;
+      zone.setAttribute("data-dropped", eng);
+      zone.style.backgroundColor = "#e1f5fe";
+    });
+  });
+}
+
+textData.forEach(createSentenceBox);
+</script>
+
+</body>
+</html>
